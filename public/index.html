@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puzzle #5 — Form Autosave</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1115;
+    --card: #181b22;
+    --border: #2a2f3a;
+    --text: #e8eaed;
+    --muted: #8b92a0;
+    --accent: #5b8cff;
+    --accent-hover: #4a77e0;
+    --danger: #e05a5a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 24px;
+  }
+  .card {
+    width: 100%;
+    max-width: 440px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px;
+  }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; }
+  p.sub { color: var(--muted); font-size: 0.9rem; margin: 0 0 24px; }
+  label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+    margin-top: 16px;
+  }
+  input, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #0c0e13;
+    color: var(--text);
+    font-size: 0.95rem;
+    font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 80px; }
+  input:focus, textarea:focus { outline: 2px solid var(--accent); }
+  .status {
+    margin-top: 18px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    min-height: 18px;
+  }
+  .status.saved { color: #5bd68f; }
+  .row {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+  }
+  button {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: #fff; }
+  button.primary:hover { background: var(--accent-hover); }
+  button.ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  button.ghost:hover { border-color: var(--danger); color: var(--danger); }
+  .banner {
+    display: none;
+    background: #1c2a1f;
+    border: 1px solid #2f5a3a;
+    color: #8fd6a8;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    margin-bottom: 18px;
+  }
+  .banner.show { display: block; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Contact form</h1>
+    <p class="sub">Fields autosave to your browser as you type and reload here on return — even if you never hit submit.</p>
+
+    <div class="banner" id="restoredBanner">Restored from a previous visit.</div>
+
+    <form id="contactForm" autocomplete="off">
+      <label for="name">Name</label>
+      <input type="text" id="name" name="name" placeholder="Jane Doe">
+
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" placeholder="jane@example.com">
+
+      <label for="message">Message</label>
+      <textarea id="message" name="message" placeholder="What's on your mind?"></textarea>
+
+      <div class="status" id="status"></div>
+
+      <div class="row">
+        <button type="submit" class="primary">Submit</button>
+        <button type="button" class="ghost" id="clearBtn">Clear saved data</button>
+      </div>
+    </form>
+  </div>
+
+<script>
+(function () {
+  var STORAGE_KEY = 'puzzle5_form_data';
+  var form = document.getElementById('contactForm');
+  var fields = ['name', 'email', 'message'];
+  var statusEl = document.getElementById('status');
+  var banner = document.getElementById('restoredBanner');
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function save() {
+    var data = {};
+    fields.forEach(function (id) {
+      data[id] = document.getElementById(id).value;
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    var now = new Date();
+    statusEl.textContent = 'Saved to browser storage at ' + now.toLocaleTimeString();
+    statusEl.classList.add('saved');
+  }
+
+  function restore() {
+    var data = load();
+    if (!data) return;
+    var hasAny = false;
+    fields.forEach(function (id) {
+      if (data[id]) {
+        document.getElementById(id).value = data[id];
+        hasAny = true;
+      }
+    });
+    if (hasAny) {
+      banner.classList.add('show');
+      statusEl.textContent = 'Loaded saved values from a previous visit.';
+      statusEl.classList.add('saved');
+    }
+  }
+
+  function clearSaved() {
+    localStorage.removeItem(STORAGE_KEY);
+    fields.forEach(function (id) {
+      document.getElementById(id).value = '';
+    });
+    banner.classList.remove('show');
+    statusEl.textContent = 'Cleared saved data.';
+    statusEl.classList.remove('saved');
+  }
+
+  fields.forEach(function (id) {
+    document.getElementById(id).addEventListener('input', save);
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', clearSaved);
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    statusEl.textContent = 'Submitted (demo — no backend). Saved data left in place.';
+  });
+
+  restore();
+})();
+</script>
+</body>
+</html>
